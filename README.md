@@ -26,7 +26,7 @@
 
 # 通过此 Skill 完成的项目
 
-## [notify-send-restapi](https://github.com/Azusa-mikan/notify-send-restapi)
+ [notify-send-restapi](https://github.com/Azusa-mikan/notify-send-restapi)
 
 把桌面 `notify-send` 通知能力封装成异步 REST 接口的服务，约 3200 行（应用约 1100 行、测试约 1100 行，含 83 个测试用例，另有安装脚本与 systemd 单元）。
 
