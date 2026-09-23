@@ -26,7 +26,16 @@
 
 # 通过此 Skill 完成的项目
 
-[notify-send-restapi](https://github.com/Azusa-mikan/notify-send-restapi)
+## [notify-send-restapi](https://github.com/Azusa-mikan/notify-send-restapi)
+
+把桌面 `notify-send` 通知能力封装成异步 REST 接口的服务，约 3200 行（应用约 1100 行、测试约 1100 行，含 83 个测试用例，另有安装脚本与 systemd 单元）。
+
+**它验证了什么：**
+
+- **用户几乎没介入。** 全程只做派发，没手动改过代码，也没在实现过程中逐轮盯着。代码质量不是靠人事后兜出来的。
+- **审查发生在独立上下文里。** 主 Agent 审的是子 Agent 交上来的外来交付物，不是自己刚写的东西，所以不存在「自己夸自己」。
+- **收尾是干净的。** 无 `TODO` / `FIXME` 残留，无 `shell=True`、无 `os.system`，子进程一律走 argv 列表，参数不拼 shell 字符串；公共函数带类型标注，docstring 说明「为什么」而非复述代码。
+- **细节经得起看。** 用独立 fd 传通知 ID 以避开「数字型动作名」与 ID 混淆；`Hint` 按 notify-send 语法逐条校验上界；并发清理路径全部幂等；测试主动避免新增依赖。
 
 # 许可证
 
