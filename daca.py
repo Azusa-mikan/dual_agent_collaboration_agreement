@@ -65,6 +65,13 @@ class CorruptChangelog(ValueError):
     pass
 
 
+class AlternateError(ValueError):
+    def __init__(self, prev, author):
+        self.prev = prev
+        self.author = author
+        super().__init__(f"上一条作者也是 {author}，轮转未推进")
+
+
 @dataclass(slots=True, kw_only=True)
 class ChangeLog:
     round: int
@@ -222,6 +229,10 @@ def _load_rounds(path: Path) -> list[ChangeLog]:
         expected = i + 1
         if rec.round != expected:
             raise CorruptChangelog(f"第 {i+1} 条记录 round 应为 {expected}，实为 {rec.round}")
+        if rounds and rounds[-1].author == rec.author:
+            raise CorruptChangelog(
+                f"第 {i+1} 条记录作者与第 {i} 条相同: {rec.author}，轮转未推进"
+            )
         rounds.append(rec)
     return rounds
 
@@ -247,6 +258,8 @@ def append(**fields) -> ChangeLog:
         path = SCRIPT_DIR / FILE
         rounds = _load_rounds(path)
         record = ChangeLog(round=len(rounds) + 1, **fields)
+        if rounds and rounds[-1].author == record.author:
+            raise AlternateError(rounds[-1], record.author)
         rounds.append(record)
         _write_rounds(path, [asdict(r) for r in rounds])
         return record
@@ -306,6 +319,11 @@ def _plan_fixes(data: list[dict]) -> tuple[list[dict], list[str]]:
             raise CorruptChangelog(
                 f"第 {idx} 条记录 {e.field} 非法 ({e.value!r})，fix 不猜测语义，无法处理"
             ) from e
+
+        if result and result[-1]["author"] == r["author"]:
+            raise CorruptChangelog(
+                f"第 {idx} 条记录作者与第 {idx-1} 条相同，fix 不猜测语义，无法处理"
+            )
 
         result.append(r)
 
@@ -461,6 +479,12 @@ def main():
     except CorruptChangelog as e:
         print(f"错误: changelog.json 已损坏: {e}")
         print("提示: 文件被外部修改或损坏，请修复后重试，或恢复备份。")
+        sys.exit(1)
+
+    except AlternateError as e:
+        print(f"错误: 上一条记录的作者也是 {e.author}，轮转未推进")
+        print(f"上一条状态: {e.prev.status}")
+        print(f"当前应由: {'功能审查者' if e.author == '功能实现者' else '功能实现者'}")
         sys.exit(1)
 
 
