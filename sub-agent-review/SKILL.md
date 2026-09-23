@@ -1,3 +1,13 @@
+---
+name: sub-agent-review
+description: Separates implementation from review by dispatching a Sub Agent to do the work while the main agent reviews it. Use when the user wants an agent to produce a deliverable that is verified by a different agent, to keep implementation and acceptance separate, to avoid an agent grading its own work, to keep the main agent's context free of implementation detail, or to dispatch multiple sub agents without their file changes colliding. Works for code, documents, configuration, and refactors alike.
+license: MIT
+compatibility: Requires an agent runtime that can dispatch sub agents (Agent, Task, or Subagent tools).
+metadata:
+  author: Azusa-mikan
+  version: "2.0"
+---
+
 # 实现-审查分离（主审查 / 子实现）
 
 **用户是派发任务的人，也是随时可以引导的人。** 用户把需求交给你，需求里可能带着验收标准、约束、偏好，也可能只是一句话。你负责把这份需求变成可验收的交付。
