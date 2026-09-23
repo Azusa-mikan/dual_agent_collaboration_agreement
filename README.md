@@ -24,6 +24,10 @@
 
 下载下来的 `.zip` 文件就可以供平台导入。
 
+# 通过此 Skill 完成的项目
+
+[notify-send-restapi](https://github.com/Azusa-mikan/notify-send-restapi)
+
 # 许可证
 
 [MIT](LICENSE)
