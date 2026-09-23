@@ -1,69 +1,73 @@
-# 双 Agent 协作约定
+# dual-agent-review
 
-让两个 AI Agent 协作完成一个任务：一个实现，一个审查，互相不越界。
+一个符合 [Agent Skills 规范](https://agentskills.io/specification) 的 Skill：让主 Agent 当审查者、派发的 Sub Agent 当实现者，把「写代码」和「验收代码」拆开。
+
+> 本仓库原名 `dual_agent_collaboration_agreement`，在 2.0 版本重构为 Skill 后更名为 `dual-agent-review`。
 
 ## 这是什么
 
-一份约定（`AGENTS.md`）加一个工具（`daca.py`），用来让两个 Agent 分角色干活：
-
-- **功能实现者**：只写代码，不审自己的代码，不跑测试。
-- **功能审查者**：只审代码，不写代码，跑测试。
-
-两者通过 `changelog.json` 交接，谁该上场由最新一条记录的状态决定。所有读写都经过 `daca.py`，它强制轮次连续、状态合法、写入原子。
-
-## 为什么需要
-
-让同一个 Agent 既写又审，它倾向于认为自己对。拆成两个角色、两个会话，审查者拿到的是一份已经完成的东西，立场天然不同。
-
-约定是软的——Agent 理解它，但不保证每次都照做。`daca.py` 是硬的——它不让非法状态写进去。两层配合，才跑得稳。
-
-## 怎么用
-
-1. 在项目根目录运行
+一个 Skill 目录：
 
 ```
-curl -O "https://raw.githubusercontent.com/Azusa-mikan/dual_agent_collaboration_agreement/refs/heads/main/AGENTS.md"
-
-# daca.py 会在 Agent 首次运行时按 AGENTS.md 4.0 节自动下载，
-# 也可以手动获取：
-curl -O "https://raw.githubusercontent.com/Azusa-mikan/dual_agent_collaboration_agreement/refs/heads/main/daca.py"
+dual-agent-review/
+├── SKILL.md      # 必需：frontmatter + 指令
+└── LICENSE
 ```
 
+- **主 Agent（审查者）**：定标准、派活、独立验证、给结论。不写代码。
+- **Sub Agent（实现者）**：只实现，不验收。看不到对话历史。
 
-2. 给两个 Agent 分别指定角色，例如：
-   - 会话 A：“你是功能实现者，实现 XXX”
-   - 会话 B：“你是功能审查者，看看实现者做得怎么样”
+主 Agent 把需求翻译成一份自包含的任务说明，派给 Sub Agent；Sub Agent 实现完汇报；主 Agent 独立验证并判定。一次同步调用完成交接。
 
-不同会话可以来自不同工具，不必是同一软件的不同对话。
+## 为什么不需要偏见防护机制
 
-3. 剩下的按 `AGENTS.md` 走。
+旧版本用两个独立会话协作，彼此看不见对方，所以需要一份磁盘上的交接日志加一个工具来管轮转、状态和并发写。
 
-## 命令
+现在改成主 Agent 直接派发 Sub Agent：
 
-| 命令 | 用途 |
-|---|---|
-| `python daca.py get` | 看最后一条记录 |
-| `python daca.py list [--line N]` | 看最近 N 条，默认 10 |
-| `python daca.py add ...` | 追加一条记录 |
-| `python daca.py fix [--yes]` | 修复 `changelog.json` 的机械问题，默认 dry-run |
+- Sub Agent **完全没有本次对话的上下文**，它只看到一份任务说明。偏见从何而起？
+- 主 Agent 审的是一份**外来交付物**，不是自己刚写的东西。立场天然独立。
+- 通信是同一次调用内的请求 / 返回，**没有跨会话可见性问题**，所以交接日志、状态机、锁、原子写入统统是多余的一层。
 
-`add` 的完整参数和用法见 `AGENTS.md` 第 4 节。
+少一层机制，少一处出错点。
 
-必须先有 daca.py 才能使用
+## 安装
 
-## 状态
+本仓库是**源头**，供任何工具安装。把 `dual-agent-review/` 整个目录放进你所用工具的 Skill 目录即可（不同工具路径不同）。
 
-`changelog.json` 中每条记录有一个状态：
+也可以只取 `SKILL.md`：
 
-- `待审查`：等审查者
-- `待实现`：等实现者
-- `已通过`：结束
-- `需用户裁决`：停，等人
+```
+curl -O "https://raw.githubusercontent.com/Azusa-mikan/dual-agent-review/refs/heads/main/dual-agent-review/SKILL.md"
+```
+
+然后给 Agent 下达任务，例如：
+
+```
+按 dual-agent-review 的约定，实现 XXX 功能
+```
+
+## 角色职责速查
+
+| | 主 Agent（审查者） | Sub Agent（实现者） |
+|---|---|---|
+| 写代码 | 禁止 | 负责 |
+| 跑测试 | 负责 | 禁止 |
+| 编译 / 类型检查 / lint / 构建 | 可运行（只读） | 可运行（只读） |
+| 格式化 / `--fix` / `--write` | 禁止 | 负责 |
+| 补测试 | 禁止（交回实现者） | 负责 |
+| 验收结论 | 唯一有权给出 | 禁止 |
+
+## 停止条件
+
+- **通过**：交付完成。
+- **不通过**：列阻塞项返工。同一阻塞项最多驳回 2 次，第 3 次交用户裁决。
+- **需用户裁决**：需求有歧义、双方僵持、或超出授权范围。
 
 ## 要求
 
-- Python 3.10+
-- 无第三方依赖
+- 你的工具需要支持派发子 Agent（Agent / Task / Subagent 等机制）。
+- 无第三方依赖，无需 Python。
 
 ## 许可
 

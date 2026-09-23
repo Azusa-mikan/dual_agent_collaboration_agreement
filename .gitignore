@@ -8,7 +8,6 @@ wheels/
 
 # Virtual environments
 .venv
-!AGENTS.md
-changelog.json
-changelog.lock
-changelog.json.tmp
+
+# Local agent workspace memory
+.workbuddy/
